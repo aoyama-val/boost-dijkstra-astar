@@ -37,6 +37,7 @@ void printTimer()
 //   Graph
 ///////////////////////////////////////////////////////////////////////////////
 
+typedef double weight;
 typedef boost::adjacency_list<boost::listS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, int> > Graph;
 typedef std::pair<int, int>                             Edge;
 typedef boost::graph_traits<Graph>::vertex_descriptor   Vertex;
@@ -223,25 +224,24 @@ private:
 
 void astar(const Graph& g, Vertex start, Vertex goal)
 {
-    typedef double cost;
     startTimer();
-    vector<Graph::vertex_descriptor> p(boost::num_vertices(g));
-    vector<cost> d(boost::num_vertices(g));
+    vector<Graph::vertex_descriptor> parents(boost::num_vertices(g));
+    vector<weight> distances(boost::num_vertices(g));
     try {
         // call astar named parameter interface
         boost::astar_search
             (g, start,
-             distance_heuristic<Graph, cost, vector<location> >
+             distance_heuristic<Graph, weight, vector<location> >
              (g_locations, goal),
-             boost::predecessor_map(&p[0]).distance_map(&d[0]).
+             boost::predecessor_map(&parents[0]).distance_map(&distances[0]).
              visitor(astar_goal_visitor<Vertex>(goal)));
     } catch (found_goal fg) { // found a path to the goal
         endTimer();
 
         deque<Vertex> shortest_path;
-        for(Vertex v = goal;; v = p[v]) {
+        for(Vertex v = goal;; v = parents[v]) {
             shortest_path.push_front(v);
-            if(p[v] == v)
+            if(parents[v] == v)
                 break;
         }
         printf("### A*\n");
