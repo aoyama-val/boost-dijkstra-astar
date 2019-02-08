@@ -1,5 +1,5 @@
-dijkstra: dijkstra.cpp
+shortest_path: shortest_path.cpp
 	g++ -O2 -W -Wall -Wno-unused-parameter $< -o $@
 
 run:
-	./dijkstra 91 41
+	./shortest_path 91 41
