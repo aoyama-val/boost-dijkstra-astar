@@ -47,7 +47,7 @@ Graph loadGraph(const char* filename)
 {
     std::set<int> vertices;
     std::vector<Edge> edges;
-    std::vector<int> weights;
+    std::vector<double> weights;
     FILE* fp = fopen(filename, "r");
 
     if (!fp) {
@@ -55,15 +55,14 @@ Graph loadGraph(const char* filename)
         exit(1);
     }
 
-    int n = 0;
     char buf[256];
     while (fgets(buf, sizeof(buf), fp) != NULL) {
         char type[10];
         int from;
         int to;
-        int weight;
+        double weight;
         if (buf[0] == 'a') {
-            sscanf(buf, "%s %d %d %d", type, &from, &to, &weight);
+            sscanf(buf, "%s %d %d %lf", type, &from, &to, &weight);
             vertices.insert(from);
             vertices.insert(to);
             edges.push_back(std::make_pair(from, to));
@@ -78,7 +77,7 @@ Graph loadGraph(const char* filename)
 void printRoute(std::deque<Vertex>& route)
 {
     for (const Vertex v : route) {
-        printf("%6d ", v);
+        printf("%6lu ", v);
     }
     printf("\n");
 }
@@ -196,6 +195,8 @@ public:
         CostType dx = m_location[m_goal].x - m_location[u].x;
         CostType dy = m_location[m_goal].y - m_location[u].y;
         return ::sqrt(dx * dx + dy * dy);
+        //return (abs(dx) + abs(dy)) / 2;
+        //return 0;     // ダイクストラ法に帰着
     }
 private:
     LocMap m_location;
@@ -219,7 +220,7 @@ private:
 
 void astar(const Graph& g, Vertex start, Vertex goal)
 {
-    typedef float cost;
+    typedef double cost;
     startTimer();
     vector<Graph::vertex_descriptor> p(boost::num_vertices(g));
     vector<cost> d(boost::num_vertices(g));
@@ -260,8 +261,8 @@ int main(int argc, char* argv[])
     const Vertex start = atoi(argv[1]); // 開始地点
     const Vertex goal = atoi(argv[2]); // 目的地
 
-    printf("Graph loaded: vertices: %d, edges: %d\n", boost::num_vertices(g), boost::num_edges(g));
-    printf("START: %d, GOAL: %d\n", start, goal);
+    printf("Graph loaded: vertices: %lu, edges: %lu\n", boost::num_vertices(g), boost::num_edges(g));
+    printf("START: %lu, GOAL: %lu\n", start, goal);
 
     dijkstra(g, start, goal);
 
