@@ -48,7 +48,6 @@ Graph loadGraph(const char* filename)
     std::set<int> vertices;
     std::vector<Edge> edges;
     std::vector<int> weights;
-    char buf[256];
     FILE* fp = fopen(filename, "r");
 
     if (!fp) {
@@ -56,12 +55,13 @@ Graph loadGraph(const char* filename)
         exit(1);
     }
 
-    while (!feof(fp)) {
+    int n = 0;
+    char buf[256];
+    while (fgets(buf, sizeof(buf), fp) != NULL) {
         char type[10];
         int from;
         int to;
         int weight;
-        fgets(buf, sizeof(buf), fp);
         if (buf[0] == 'a') {
             sscanf(buf, "%s %d %d %d", type, &from, &to, &weight);
             vertices.insert(from);
@@ -165,13 +165,12 @@ void loadCo(const char* filename)
     location loc;
     g_locations.push_back(loc); // インデックスを合わせるためのダミー
 
-    while (!feof(fp)) {
-        char buf[256];
+    char buf[256];
+    while (fgets(buf, sizeof(buf), fp) != NULL) {
         char type[10];
         int n;
         int y;
         int x;
-        fgets(buf, sizeof(buf), fp);
         if (buf[0] == 'v') {
             sscanf(buf, "%s %d %d %d", type, &n, &y, &x);
             location loc;
@@ -254,20 +253,21 @@ void astar(const Graph& g, Vertex start, Vertex goal)
 int main(int argc, char* argv[])
 {
     if (argc < 3) {
-        printf("Usage: %s FROM TO\n", argv[0]);
+        printf("Usage: %s START GOAL\n", argv[0]);
         exit(1);
     }
     const Graph g = loadGraph(GR_FILENAME);
-    const Vertex from = atoi(argv[1]); // 開始地点
-    const Vertex to = atoi(argv[2]); // 目的地
+    const Vertex start = atoi(argv[1]); // 開始地点
+    const Vertex goal = atoi(argv[2]); // 目的地
 
-    printf("from = %d, to = %d\n", from, to);
+    printf("Graph loaded: vertices: %d, edges: %d\n", boost::num_vertices(g), boost::num_edges(g));
+    printf("START: %d, GOAL: %d\n", start, goal);
 
-    dijkstra(g, from, to);
+    dijkstra(g, start, goal);
 
     loadCo(CO_FILENAME);
 
-    astar(g, from, to);
+    astar(g, start, goal);
 
     return 0;
 }
