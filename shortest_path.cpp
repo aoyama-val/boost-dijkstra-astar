@@ -88,6 +88,7 @@ void printRoute(std::deque<Vertex>& route)
 // このvisitorを使わないと、goalへのpathを見つけても停止せず、全頂点までの
 // pathを見つけてしまう。goalへのpathを見つけた時点で停止させるにはこのように
 // 例外を投げるしか方法がないらしい。A*も同様。
+// from pgRouting
 class dijkstra_one_goal_visitor : public boost::default_dijkstra_visitor {
 public:
     explicit dijkstra_one_goal_visitor(Vertex goal) : m_goal(goal) {}
