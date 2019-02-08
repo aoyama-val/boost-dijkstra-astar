@@ -7,6 +7,8 @@
 #include <boost/graph/dijkstra_shortest_paths.hpp>
 #include <boost/assign/list_of.hpp>
 #include <boost/graph/astar_search.hpp>
+#include <boost/graph/breadth_first_search.hpp>
+
 
 const char* GR_FILENAME = "USA-road-d.NY.gr";
 const char* CO_FILENAME = "USA-road-d.NY.co";
@@ -85,24 +87,15 @@ void printRoute(std::deque<Vertex>& route)
 //   Dijkstra
 ///////////////////////////////////////////////////////////////////////////////
 
-class dijkstra_goal_visitor : boost::default_bfs_visitor {
-//class dijkstra_goal_visitor {
-protected:
-    Vertex destination_vertex_m;
+class dijkstra_one_goal_visitor : public boost::default_dijkstra_visitor {
 public:
-    dijkstra_goal_visitor(Vertex destination_vertex_l)
-        : destination_vertex_m(destination_vertex_l) {};
-
-    void initialize_vertex(const Vertex &s, const Graph &g) const {}
-    void discover_vertex(const Vertex &s, const Graph &g) const {}
-    void examine_vertex(const Vertex &s, const Graph &g) const {}
-    void examine_edge(const Edge &e, const Graph &g) const {}
-    void edge_relaxed(const Edge &e, const Graph &g) const {}
-    void edge_not_relaxed(const Edge &e, const Graph &g) const {}
-    void finish_vertex(const Vertex &s, const Graph &g) const {
-        if (destination_vertex_m == s)
-            throw found_goal();
-    }
+    explicit dijkstra_one_goal_visitor(Vertex goal) : m_goal(goal) {}
+    template <class B_G>
+        void examine_vertex(Vertex &u, B_G &) {
+            if (u == m_goal) throw found_goal();
+        }
+private:
+    Vertex m_goal;
 };
 
 void dijkstra(const Graph& g, Vertex start, Vertex goal)
@@ -110,18 +103,19 @@ void dijkstra(const Graph& g, Vertex start, Vertex goal)
     startTimer();
 
     std::vector<Vertex> parents(boost::num_vertices(g));
-    std::vector <int> distances(boost::num_vertices(g)); 
-
-    dijkstra_goal_visitor vis(goal);
+    std::vector<int> distances(boost::num_vertices(g));
 
     try {
-        //boost::dijkstra_shortest_paths(g, start, boost::predecessor_map(&parents[0]));
         // 最短経路を計算
         boost::dijkstra_shortest_paths(
                                        g,
                                        start,
-                                       boost::predecessor_map(&parents[0]).distance_map(&distances[0])
-                                       //visitor(vis)
+                                       //boost::distance_map(make_iterator_property_map(distances.begin(), get(boost::vertex_index, g), distances[0])).
+                                       //predecessor_map(make_iterator_property_map(parents.begin(), get(boost::vertex_index, g), parents[0])).
+                                       //boost::predecessor_map(boost::make_iterator_property_map((&parents)->data(), vid_l)).
+                                       //distance_map(boost::make_iterator_property_map((&distances)->data(), vid_l)).
+                                       boost::predecessor_map(&parents[0]).distance_map(&distances[0]).
+                                       visitor(dijkstra_one_goal_visitor(goal))
                                       );
     } catch (found_goal fg) { // found a path to the goal
         endTimer();
