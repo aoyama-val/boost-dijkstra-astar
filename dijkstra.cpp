@@ -110,10 +110,6 @@ void dijkstra(const Graph& g, Vertex start, Vertex goal)
         boost::dijkstra_shortest_paths(
                                        g,
                                        start,
-                                       //boost::distance_map(make_iterator_property_map(distances.begin(), get(boost::vertex_index, g), distances[0])).
-                                       //predecessor_map(make_iterator_property_map(parents.begin(), get(boost::vertex_index, g), parents[0])).
-                                       //boost::predecessor_map(boost::make_iterator_property_map((&parents)->data(), vid_l)).
-                                       //distance_map(boost::make_iterator_property_map((&distances)->data(), vid_l)).
                                        boost::predecessor_map(&parents[0]).distance_map(&distances[0]).
                                        visitor(dijkstra_one_goal_visitor(goal))
                                       );
