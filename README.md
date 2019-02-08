@@ -2,8 +2,18 @@
 
 最短経路が短めの場合はダイクストラの方が早いが、長めの場合はA*の方が早いという結果になった。
 
+## ビルド
+
+要g++, boost
+
 ```
-./shortest_path 520 9999
+$ make
+```
+
+## 実行
+
+```
+$ ./shortest_path 520 9999
 Graph loaded: vertices: 264347, edges: 733846
 START: 520, GOAL: 9999
 ### Dijkstra
