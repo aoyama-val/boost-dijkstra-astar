@@ -6,19 +6,41 @@
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/dijkstra_shortest_paths.hpp>
 #include <boost/assign/list_of.hpp>
+#include <boost/graph/astar_search.hpp>
+
+const char* GR_FILENAME = "USA-road-d.NY.gr";
+const char* CO_FILENAME = "USA-road-d.NY.co";
 
 using namespace std;
-using namespace boost;
+
+struct timespec tsStart;
+struct timespec tsEnd;
+
+void startTimer()
+{
+    clock_gettime(CLOCK_REALTIME, &tsStart);
+}
+
+void endTimer()
+{
+    clock_gettime(CLOCK_REALTIME, &tsEnd);
+}
+
+void printTimer()
+{
+    printf("Time: %g sec\n", (double)(tsEnd.tv_sec - tsStart.tv_sec) + 1.0e-9 * (tsEnd.tv_nsec - tsStart.tv_nsec));
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+//   Dijkstra
+///////////////////////////////////////////////////////////////////////////////
 
 typedef boost::adjacency_list<boost::listS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, int> > Graph;
 typedef std::pair<int, int>                             Edge;
 typedef boost::graph_traits<Graph>::vertex_descriptor   Vertex;
 
-struct timespec tsStart;
-struct timespec tsEnd;
-
-// グラフを作る
-Graph make_graph(const char* filename)
+Graph loadGraph(const char* filename)
 {
     std::set<int> vertices;
     std::vector<Edge> edges;
@@ -50,71 +72,178 @@ Graph make_graph(const char* filename)
     return Graph(edges.begin(), edges.end(), weights.begin(), vertices.size());
 }
 
-void startTimer()
+void printRoute(std::deque<Vertex>& route)
 {
-    clock_gettime(CLOCK_REALTIME, &tsStart);
+    for (const Vertex v : route) {
+        printf("%6d ", v);
+    }
+    printf("\n");
 }
 
-void endTimer()
-{
-    clock_gettime(CLOCK_REALTIME, &tsEnd);
-}
-
-void printTimer()
-{
-    printf("Time: %g sec\n", (double)(tsEnd.tv_sec - tsStart.tv_sec) + 1.0e-9 * (tsEnd.tv_nsec - tsStart.tv_nsec));
-}
-
-void dijkstra(const Graph& g, Vertex from, Vertex to)
+void dijkstra(const Graph& g, Vertex start, Vertex goal)
 {
     startTimer();
 
     // 最短経路を計算
     std::vector<Vertex> parents(boost::num_vertices(g));
-    boost::dijkstra_shortest_paths(g, from, boost::predecessor_map(&parents[0]));
+    boost::dijkstra_shortest_paths(g, start, boost::predecessor_map(&parents[0]));
 
     endTimer();
 
     // 経路なし
-    if (parents[to] == to) {
-        std::cout << "no path" << std::endl;
+    if (parents[goal] == goal) {
+        printf("Route not found\n");
         return;
     }
 
     // 最短経路の頂点リストを作成
     std::deque<Vertex> route;
-    for (Vertex v = to; v != from; v = parents[v]) {
+    for (Vertex v = goal; v != start; v = parents[v]) {
         route.push_front(v);
     }
-    route.push_front(from);
+    route.push_front(start);
 
     // 最短経路を出力
-    int i = 1;
-    for (const Vertex v : route) {
-        std::cout << i << ": " <<  v << std::endl;
-        i++;
-    }
+    printf("A*\n");
+    printRoute(route);
 
     printTimer();
 }
 
-void astar()
+
+///////////////////////////////////////////////////////////////////////////////
+//   A*
+///////////////////////////////////////////////////////////////////////////////
+
+struct location
 {
+    int y, x;
+};
+
+typedef Graph::vertex_descriptor vertex;
+typedef Graph::edge_descriptor edge_descriptor;
+typedef Graph::vertex_iterator vertex_iterator;
+typedef std::pair<int, int> edge;
+
+struct found_goal {}; // exception for termination
+std::vector<location> g_locations;
+
+void loadCo(const char* filename)
+{
+    FILE* fp = fopen(filename, "r");
+
+    if (!fp) {
+        fprintf(stderr, "Cound not open: %s\n", filename);
+        exit(1);
+    }
+
+    location loc;
+    g_locations.push_back(loc); // インデックスを合わせるためのダミー
+
+    while (!feof(fp)) {
+        char buf[256];
+        char type[10];
+        int n;
+        int y;
+        int x;
+        fgets(buf, sizeof(buf), fp);
+        if (buf[0] == 'v') {
+            sscanf(buf, "%s %d %d %d", type, &n, &y, &x);
+            location loc;
+            loc.y = y;
+            loc.x = x;
+            g_locations.push_back(loc);
+        }
+    }
+
+    fclose(fp);
+}
+
+// euclidean distance heuristic
+template <class Graph, class CostType, class LocMap>
+class distance_heuristic : public boost::astar_heuristic<Graph, CostType>
+{
+public:
+    typedef typename boost::graph_traits<Graph>::vertex_descriptor Vertex;
+    distance_heuristic(LocMap& l, Vertex goal)
+        : m_location(l), m_goal(goal) {}
+    CostType operator()(Vertex u)
+    {
+        CostType dx = m_location[m_goal].x - m_location[u].x;
+        CostType dy = m_location[m_goal].y - m_location[u].y;
+        return ::sqrt(dx * dx + dy * dy);
+    }
+private:
+    LocMap m_location;
+    Vertex m_goal;
+};
+
+// visitor that terminates when we find the goal
+template <class Vertex>
+class astar_goal_visitor : public boost::default_astar_visitor
+{
+public:
+    astar_goal_visitor(Vertex goal) : m_goal(goal) {}
+    template <class Graph>
+        void examine_vertex(Vertex u, Graph& g) {
+            if(u == m_goal)
+                throw found_goal();
+        }
+private:
+    Vertex m_goal;
+};
+
+void astar(const Graph& g, Vertex start, Vertex goal)
+{
+    typedef float cost;
+    startTimer();
+    vector<Graph::vertex_descriptor> p(boost::num_vertices(g));
+    vector<cost> d(boost::num_vertices(g));
+    try {
+        // call astar named parameter interface
+        boost::astar_search
+            (g, start,
+             distance_heuristic<Graph, cost, vector<location> >
+             (g_locations, goal),
+             boost::predecessor_map(&p[0]).distance_map(&d[0]).
+             visitor(astar_goal_visitor<vertex>(goal)));
+    } catch (found_goal fg) { // found a path to the goal
+        endTimer();
+
+        deque<vertex> shortest_path;
+        for(vertex v = goal;; v = p[v]) {
+            shortest_path.push_front(v);
+            if(p[v] == v)
+                break;
+        }
+        printf("Dijkstra\n");
+        shortest_path.push_front(start);
+        printRoute(shortest_path);
+        //deque<vertex>::iterator spi = shortest_path.begin();
+        //for (++spi; spi != shortest_path.end(); ++spi)
+        //    cout << *spi << endl;
+        //cout << "Total travel time: " << d[goal] << endl;
+    }
+    printTimer();
 }
 
 int main(int argc, char* argv[])
 {
-    if (argc < 4) {
-        printf("Usage: %s GR_FILE FROM TO\n", argv[0]);
+    if (argc < 3) {
+        printf("Usage: %s FROM TO\n", argv[0]);
         exit(1);
     }
-    const Graph g = make_graph(argv[1]);
-    const Vertex from = atoi(argv[2]); // 開始地点
-    const Vertex to = atoi(argv[3]); // 目的地
+    const Graph g = loadGraph(GR_FILENAME);
+    const Vertex from = atoi(argv[1]); // 開始地点
+    const Vertex to = atoi(argv[2]); // 目的地
+
+    printf("from = %d, to = %d\n", from, to);
 
     dijkstra(g, from, to);
 
-    astar();
+    loadCo(CO_FILENAME);
+
+    astar(g, from, to);
 
     return 0;
 }
