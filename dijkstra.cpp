@@ -33,12 +33,13 @@ void printTimer()
 
 
 ///////////////////////////////////////////////////////////////////////////////
-//   Dijkstra
+//   Graph
 ///////////////////////////////////////////////////////////////////////////////
 
 typedef boost::adjacency_list<boost::listS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, int> > Graph;
 typedef std::pair<int, int>                             Edge;
 typedef boost::graph_traits<Graph>::vertex_descriptor   Vertex;
+struct found_goal {}; // exception for termination
 
 Graph loadGraph(const char* filename)
 {
@@ -80,32 +81,68 @@ void printRoute(std::deque<Vertex>& route)
     printf("\n");
 }
 
+///////////////////////////////////////////////////////////////////////////////
+//   Dijkstra
+///////////////////////////////////////////////////////////////////////////////
+
+class dijkstra_goal_visitor : boost::default_bfs_visitor {
+//class dijkstra_goal_visitor {
+protected:
+    Vertex destination_vertex_m;
+public:
+    dijkstra_goal_visitor(Vertex destination_vertex_l)
+        : destination_vertex_m(destination_vertex_l) {};
+
+    void initialize_vertex(const Vertex &s, const Graph &g) const {}
+    void discover_vertex(const Vertex &s, const Graph &g) const {}
+    void examine_vertex(const Vertex &s, const Graph &g) const {}
+    void examine_edge(const Edge &e, const Graph &g) const {}
+    void edge_relaxed(const Edge &e, const Graph &g) const {}
+    void edge_not_relaxed(const Edge &e, const Graph &g) const {}
+    void finish_vertex(const Vertex &s, const Graph &g) const {
+        if (destination_vertex_m == s)
+            throw found_goal();
+    }
+};
+
 void dijkstra(const Graph& g, Vertex start, Vertex goal)
 {
     startTimer();
 
-    // 最短経路を計算
     std::vector<Vertex> parents(boost::num_vertices(g));
-    boost::dijkstra_shortest_paths(g, start, boost::predecessor_map(&parents[0]));
+    std::vector <int> distances(boost::num_vertices(g)); 
 
-    endTimer();
+    dijkstra_goal_visitor vis(goal);
 
-    // 経路なし
-    if (parents[goal] == goal) {
-        printf("Route not found\n");
-        return;
+    try {
+        //boost::dijkstra_shortest_paths(g, start, boost::predecessor_map(&parents[0]));
+        // 最短経路を計算
+        boost::dijkstra_shortest_paths(
+                                       g,
+                                       start,
+                                       boost::predecessor_map(&parents[0]).distance_map(&distances[0])
+                                       //visitor(vis)
+                                      );
+    } catch (found_goal fg) { // found a path to the goal
+        endTimer();
+
+        // 経路なし
+        if (parents[goal] == goal) {
+            printf("Route not found\n");
+            return;
+        }
+
+        // 最短経路の頂点リストを作成
+        std::deque<Vertex> route;
+        for (Vertex v = goal; v != start; v = parents[v]) {
+            route.push_front(v);
+        }
+        route.push_front(start);
+
+        // 最短経路を出力
+        printf("### Dijkstra\n");
+        printRoute(route);
     }
-
-    // 最短経路の頂点リストを作成
-    std::deque<Vertex> route;
-    for (Vertex v = goal; v != start; v = parents[v]) {
-        route.push_front(v);
-    }
-    route.push_front(start);
-
-    // 最短経路を出力
-    printf("A*\n");
-    printRoute(route);
 
     printTimer();
 }
@@ -120,12 +157,10 @@ struct location
     int y, x;
 };
 
-typedef Graph::vertex_descriptor vertex;
 typedef Graph::edge_descriptor edge_descriptor;
 typedef Graph::vertex_iterator vertex_iterator;
 typedef std::pair<int, int> edge;
 
-struct found_goal {}; // exception for termination
 std::vector<location> g_locations;
 
 void loadCo(const char* filename)
@@ -186,7 +221,7 @@ public:
     astar_goal_visitor(Vertex goal) : m_goal(goal) {}
     template <class Graph>
         void examine_vertex(Vertex u, Graph& g) {
-            if(u == m_goal)
+            if (u == m_goal)
                 throw found_goal();
         }
 private:
@@ -206,20 +241,19 @@ void astar(const Graph& g, Vertex start, Vertex goal)
              distance_heuristic<Graph, cost, vector<location> >
              (g_locations, goal),
              boost::predecessor_map(&p[0]).distance_map(&d[0]).
-             visitor(astar_goal_visitor<vertex>(goal)));
+             visitor(astar_goal_visitor<Vertex>(goal)));
     } catch (found_goal fg) { // found a path to the goal
         endTimer();
 
-        deque<vertex> shortest_path;
-        for(vertex v = goal;; v = p[v]) {
+        deque<Vertex> shortest_path;
+        for(Vertex v = goal;; v = p[v]) {
             shortest_path.push_front(v);
             if(p[v] == v)
                 break;
         }
-        printf("Dijkstra\n");
-        shortest_path.push_front(start);
+        printf("### A*\n");
         printRoute(shortest_path);
-        //deque<vertex>::iterator spi = shortest_path.begin();
+        //deque<Vertex>::iterator spi = shortest_path.begin();
         //for (++spi; spi != shortest_path.end(); ++spi)
         //    cout << *spi << endl;
         //cout << "Total travel time: " << d[goal] << endl;
