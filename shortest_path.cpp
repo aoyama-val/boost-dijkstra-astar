@@ -1,19 +1,18 @@
-#include <iostream>
+///////////////////////////////////////////////////////////////////////////////
+//  boostのDijkstraとA*を使ってみた
+///////////////////////////////////////////////////////////////////////////////
+
 #include <vector>
 #include <deque>
-#include <string>
 #include <set>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/dijkstra_shortest_paths.hpp>
-#include <boost/assign/list_of.hpp>
 #include <boost/graph/astar_search.hpp>
-#include <boost/graph/breadth_first_search.hpp>
 
+using namespace std;
 
 const char* GR_FILENAME = "USA-road-d.NY.gr";
 const char* CO_FILENAME = "USA-road-d.NY.co";
-
-using namespace std;
 
 struct timespec tsStart;
 struct timespec tsEnd;
@@ -86,6 +85,9 @@ void printRoute(std::deque<Vertex>& route)
 //   Dijkstra
 ///////////////////////////////////////////////////////////////////////////////
 
+// このvisitorを使わないと、goalへのpathを見つけても停止せず、全頂点までの
+// pathを見つけてしまう。goalへのpathを見つけた時点で停止させるにはこのように
+// 例外を投げるしか方法がないらしい。A*も同様。
 class dijkstra_one_goal_visitor : public boost::default_dijkstra_visitor {
 public:
     explicit dijkstra_one_goal_visitor(Vertex goal) : m_goal(goal) {}
