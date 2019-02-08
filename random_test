@@ -1,0 +1,28 @@
+#!/usr/bin/env ruby
+
+V_MAX = 264346
+
+def compare
+  start = rand(V_MAX)
+  goal = rand(V_MAX)
+  cmd = "./shortest_path #{start} #{goal}"
+  IO.popen(cmd, "r") do |io|
+    while line = io.gets
+      if line =~ /^###\s*(\S+)/ 
+        algorithm = $1
+        line2 = io.gets
+        line3 = io.gets
+        path = line2.split
+        line3 =~ /(\S+) sec/
+        time = $1.to_f
+        printf("%-8s\t%5d\t%.5f\t", algorithm, path.length, time)
+      end
+    end
+  end
+  puts
+end
+
+n = (ARGV[0] || 3).to_i
+n.times do
+  compare
+end
