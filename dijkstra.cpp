@@ -7,10 +7,15 @@
 #include <boost/graph/dijkstra_shortest_paths.hpp>
 #include <boost/assign/list_of.hpp>
 
-typedef boost::adjacency_list<boost::listS, boost::vecS, boost::directedS,
-    boost::no_property, boost::property<boost::edge_weight_t, int> > Graph;
+using namespace std;
+using namespace boost;
+
+typedef boost::adjacency_list<boost::listS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, int> > Graph;
 typedef std::pair<int, int>                             Edge;
 typedef boost::graph_traits<Graph>::vertex_descriptor   Vertex;
+
+struct timespec tsStart;
+struct timespec tsEnd;
 
 // グラフを作る
 Graph make_graph(const char* filename)
@@ -45,31 +50,35 @@ Graph make_graph(const char* filename)
     return Graph(edges.begin(), edges.end(), weights.begin(), vertices.size());
 }
 
-int main(int argc, char* argv[])
+void startTimer()
 {
-    if (argc < 4) {
-        printf("Usage: %s GR_FILE FROM TO\n", argv[0]);
-        exit(1);
-    }
-    const Graph g = make_graph(argv[1]);
-    const Vertex from = atoi(argv[2]); // 開始地点
-    const Vertex to = atoi(argv[3]); // 目的地
-
-    struct timespec tsStart;
-    struct timespec tsEnd;
     clock_gettime(CLOCK_REALTIME, &tsStart);
+}
+
+void endTimer()
+{
+    clock_gettime(CLOCK_REALTIME, &tsEnd);
+}
+
+void printTimer()
+{
+    printf("Time: %g sec\n", (double)(tsEnd.tv_sec - tsStart.tv_sec) + 1.0e-9 * (tsEnd.tv_nsec - tsStart.tv_nsec));
+}
+
+void dijkstra(const Graph& g, Vertex from, Vertex to)
+{
+    startTimer();
 
     // 最短経路を計算
     std::vector<Vertex> parents(boost::num_vertices(g));
-    boost::dijkstra_shortest_paths(g, from,
-                boost::predecessor_map(&parents[0]));
+    boost::dijkstra_shortest_paths(g, from, boost::predecessor_map(&parents[0]));
 
-    clock_gettime(CLOCK_REALTIME, &tsEnd);
+    endTimer();
 
     // 経路なし
     if (parents[to] == to) {
         std::cout << "no path" << std::endl;
-        return 1;
+        return;
     }
 
     // 最短経路の頂点リストを作成
@@ -80,11 +89,32 @@ int main(int argc, char* argv[])
     route.push_front(from);
 
     // 最短経路を出力
-    int i = 0;
+    int i = 1;
     for (const Vertex v : route) {
-        i++;
         std::cout << i << ": " <<  v << std::endl;
+        i++;
     }
 
-    printf("Time: %g sec\n", (double)(tsEnd.tv_sec - tsStart.tv_sec) + 1.0e-9 * (tsEnd.tv_nsec - tsStart.tv_nsec));
+    printTimer();
+}
+
+void astar()
+{
+}
+
+int main(int argc, char* argv[])
+{
+    if (argc < 4) {
+        printf("Usage: %s GR_FILE FROM TO\n", argv[0]);
+        exit(1);
+    }
+    const Graph g = make_graph(argv[1]);
+    const Vertex from = atoi(argv[2]); // 開始地点
+    const Vertex to = atoi(argv[3]); // 目的地
+
+    dijkstra(g, from, to);
+
+    astar();
+
+    return 0;
 }
