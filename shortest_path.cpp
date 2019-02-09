@@ -134,6 +134,7 @@ void dijkstra(const Graph& g, Vertex start, Vertex goal)
         // 最短経路を出力
         printf("### Dijkstra\n");
         printRoute(route);
+        printf("total cost: %.1f\n", distances[goal]);
     }
 
     printTimer();
@@ -229,12 +230,13 @@ void astar(const Graph& g, Vertex start, Vertex goal)
     startTimer();
     try {
         // call astar named parameter interface
-        boost::astar_search(g,
+        boost::astar_search(
+                            g,
                             start,
                             distance_heuristic<Graph, Weight, vector<location> >(g_locations, goal),
                             boost::predecessor_map(&predecessors[0]).distance_map(&distances[0]).
                             visitor(astar_goal_visitor<Vertex>(goal))
-                            );
+                           );
     } catch (found_goal fg) { // found a path to the goal
         endTimer();
 
@@ -246,10 +248,7 @@ void astar(const Graph& g, Vertex start, Vertex goal)
         }
         printf("### A*\n");
         printRoute(shortest_path);
-        //deque<Vertex>::iterator spi = shortest_path.begin();
-        //for (++spi; spi != shortest_path.end(); ++spi)
-        //    cout << *spi << endl;
-        //cout << "Total travel time: " << d[goal] << endl;
+        printf("total cost: %.1f\n", distances[goal]);
     }
     printTimer();
 }
