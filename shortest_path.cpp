@@ -264,7 +264,8 @@ int main(int argc, char* argv[])
     const Vertex start = atoi(argv[1]); // 開始地点
     const Vertex goal = atoi(argv[2]); // 目的地
 
-    printf("Graph loaded: vertices: %lu, edges: %lu\n", boost::num_vertices(g), boost::num_edges(g));
+    // gには頂点0が入っているためnum_verticesは1多くなる。アルゴリズムには影響ないはず。
+    printf("Graph loaded: vertices: %lu, edges: %lu\n", boost::num_vertices(g) - 1, boost::num_edges(g));
     printf("START: %lu, GOAL: %lu\n", start, goal);
 
     dijkstra(g, start, goal);
