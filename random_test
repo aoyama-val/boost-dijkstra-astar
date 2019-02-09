@@ -12,8 +12,9 @@ def compare
         algorithm = $1
         line2 = io.gets
         line3 = io.gets
+        line4 = io.gets
         path = line2.split
-        line3 =~ /(\S+) sec/
+        line4 =~ /(\S+) sec/
         time = $1.to_f
         printf("%-8s\t%5d\t%.5f\t", algorithm, path.length, time)
       end

@@ -41,7 +41,7 @@ typedef double Weight;
 typedef boost::adjacency_list<boost::listS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, int> > Graph;
 typedef std::pair<int, int>                             Edge;
 typedef boost::graph_traits<Graph>::vertex_descriptor   Vertex;
-struct found_goal {}; // exception for termination
+struct FoundGoal {}; // exception for termination
 
 Graph loadGraph(const char* filename)
 {
@@ -89,13 +89,15 @@ void printRoute(std::deque<Vertex>& route)
 // このvisitorを使わないと、goalへのpathを見つけても停止せず、全頂点までの
 // pathを見つけてしまう。goalへのpathを見つけた時点で停止させるにはこのように
 // 例外を投げるしか方法がないらしい。A*も同様。
-// from pgRouting
-class dijkstra_one_goal_visitor : public boost::default_dijkstra_visitor {
+// adopted from pgRouting
+class dijkstra_one_goal_visitor : public boost::default_dijkstra_visitor
+{
 public:
-    explicit dijkstra_one_goal_visitor(Vertex goal) : m_goal(goal) {}
-    template <class B_G>
-        void examine_vertex(Vertex &u, B_G &) {
-            if (u == m_goal) throw found_goal();
+    dijkstra_one_goal_visitor(Vertex goal) : m_goal(goal) {}
+    template <class Graph>
+        void examine_vertex(Vertex u, Graph& g) {
+            if (u == m_goal)
+                throw FoundGoal();
         }
 private:
     Vertex m_goal;
@@ -115,7 +117,7 @@ void dijkstra(const Graph& g, Vertex start, Vertex goal)
                                        boost::predecessor_map(&predecessors[0]).distance_map(&distances[0]).
                                        visitor(dijkstra_one_goal_visitor(goal))
                                       );
-    } catch (found_goal fg) { // found a path to the goal
+    } catch (FoundGoal fg) { // found a path to the goal
         endTimer();
 
         // 経路なし
@@ -208,7 +210,6 @@ private:
 };
 
 // visitor that terminates when we find the goal
-template <class Vertex>
 class astar_goal_visitor : public boost::default_astar_visitor
 {
 public:
@@ -216,7 +217,7 @@ public:
     template <class Graph>
         void examine_vertex(Vertex u, Graph& g) {
             if (u == m_goal)
-                throw found_goal();
+                throw FoundGoal();
         }
 private:
     Vertex m_goal;
@@ -235,9 +236,9 @@ void astar(const Graph& g, Vertex start, Vertex goal)
                             start,
                             distance_heuristic<Graph, Weight, vector<location> >(g_locations, goal),
                             boost::predecessor_map(&predecessors[0]).distance_map(&distances[0]).
-                            visitor(astar_goal_visitor<Vertex>(goal))
+                            visitor(astar_goal_visitor(goal))
                            );
-    } catch (found_goal fg) { // found a path to the goal
+    } catch (FoundGoal fg) { // found a path to the goal
         endTimer();
 
         deque<Vertex> shortest_path;
