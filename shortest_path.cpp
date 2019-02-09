@@ -37,7 +37,7 @@ void printTimer()
 //   Graph
 ///////////////////////////////////////////////////////////////////////////////
 
-typedef double weight;
+typedef double Weight;
 typedef boost::adjacency_list<boost::listS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, int> > Graph;
 typedef std::pair<int, int>                             Edge;
 typedef boost::graph_traits<Graph>::vertex_descriptor   Vertex;
@@ -104,7 +104,7 @@ private:
 void dijkstra(const Graph& g, Vertex start, Vertex goal)
 {
     std::vector<Vertex> predecessors(boost::num_vertices(g));
-    std::vector<int> distances(boost::num_vertices(g));
+    std::vector<Weight> distances(boost::num_vertices(g));
 
     startTimer();
     try {
@@ -224,14 +224,14 @@ private:
 void astar(const Graph& g, Vertex start, Vertex goal)
 {
     vector<Graph::vertex_descriptor> predecessors(boost::num_vertices(g));
-    vector<weight> distances(boost::num_vertices(g));
+    vector<Weight> distances(boost::num_vertices(g));
 
     startTimer();
     try {
         // call astar named parameter interface
         boost::astar_search(g,
                             start,
-                            distance_heuristic<Graph, weight, vector<location> >(g_locations, goal),
+                            distance_heuristic<Graph, Weight, vector<location> >(g_locations, goal),
                             boost::predecessor_map(&predecessors[0]).distance_map(&distances[0]).
                             visitor(astar_goal_visitor<Vertex>(goal))
                             );
