@@ -103,7 +103,7 @@ private:
 
 void dijkstra(const Graph& g, Vertex start, Vertex goal)
 {
-    std::vector<Vertex> parents(boost::num_vertices(g));
+    std::vector<Vertex> predecessors(boost::num_vertices(g));
     std::vector<int> distances(boost::num_vertices(g));
 
     startTimer();
@@ -112,21 +112,21 @@ void dijkstra(const Graph& g, Vertex start, Vertex goal)
         boost::dijkstra_shortest_paths(
                                        g,
                                        start,
-                                       boost::predecessor_map(&parents[0]).distance_map(&distances[0]).
+                                       boost::predecessor_map(&predecessors[0]).distance_map(&distances[0]).
                                        visitor(dijkstra_one_goal_visitor(goal))
                                       );
     } catch (found_goal fg) { // found a path to the goal
         endTimer();
 
         // 経路なし
-        if (parents[goal] == goal) {
+        if (predecessors[goal] == goal) {
             printf("Route not found\n");
             return;
         }
 
         // 最短経路の頂点リストを作成
         std::deque<Vertex> route;
-        for (Vertex v = goal; v != start; v = parents[v]) {
+        for (Vertex v = goal; v != start; v = predecessors[v]) {
             route.push_front(v);
         }
         route.push_front(start);
@@ -223,7 +223,7 @@ private:
 
 void astar(const Graph& g, Vertex start, Vertex goal)
 {
-    vector<Graph::vertex_descriptor> parents(boost::num_vertices(g));
+    vector<Graph::vertex_descriptor> predecessors(boost::num_vertices(g));
     vector<weight> distances(boost::num_vertices(g));
 
     startTimer();
@@ -233,15 +233,15 @@ void astar(const Graph& g, Vertex start, Vertex goal)
             (g, start,
              distance_heuristic<Graph, weight, vector<location> >
              (g_locations, goal),
-             boost::predecessor_map(&parents[0]).distance_map(&distances[0]).
+             boost::predecessor_map(&predecessors[0]).distance_map(&distances[0]).
              visitor(astar_goal_visitor<Vertex>(goal)));
     } catch (found_goal fg) { // found a path to the goal
         endTimer();
 
         deque<Vertex> shortest_path;
-        for(Vertex v = goal;; v = parents[v]) {
+        for(Vertex v = goal;; v = predecessors[v]) {
             shortest_path.push_front(v);
-            if(parents[v] == v)
+            if(predecessors[v] == v)
                 break;
         }
         printf("### A*\n");
