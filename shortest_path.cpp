@@ -103,11 +103,10 @@ private:
 
 void dijkstra(const Graph& g, Vertex start, Vertex goal)
 {
-    startTimer();
-
     std::vector<Vertex> parents(boost::num_vertices(g));
     std::vector<int> distances(boost::num_vertices(g));
 
+    startTimer();
     try {
         // 最短経路を計算
         boost::dijkstra_shortest_paths(
@@ -224,9 +223,10 @@ private:
 
 void astar(const Graph& g, Vertex start, Vertex goal)
 {
-    startTimer();
     vector<Graph::vertex_descriptor> parents(boost::num_vertices(g));
     vector<weight> distances(boost::num_vertices(g));
+
+    startTimer();
     try {
         // call astar named parameter interface
         boost::astar_search
